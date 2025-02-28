@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a2b3c;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: #243b53;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            background-color: #4CAF50;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .binary-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .power-number {
+            background-color: #60a5fa;
+            padding: 10px 5px;
+            text-align: center;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .binary-cell {
+            background-color: #334155;
+            padding: 20px 10px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.5em;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .binary-cell.active {
+            background-color: #fbbf24;
+            color: black;
+        }
+
+        .result-container {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .equals-sign {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .result-box {
+            background-color: white;
+            color: black;
+            padding: 10px 20px;
+            border-radius: 5px;
+            min-width: 100px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            margin: 20px auto;
+        }
+
+        .numpad-button {
+            background-color: #fbbf24;
+            color: black;
+            border: none;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .numpad-button:hover {
+            background-color: #f59e0b;
+        }
+
+        .control-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .control-button {
+            background-color: #fbbf24;
+            color: black;
+            border: none;
+            padding: 10px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .control-button:hover {
+            background-color: #f59e0b;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">SCORE: <span id="score">0</span></div>
+            <div class="stat-item">LEVEL: <span id="level">1</span></div>
+            <div class="stat-item">LINES LEFT: <span id="lines-left">15</span></div>
+        </div>
+
+        <!-- Binary Grid -->
+        <div class="binary-grid" id="power-numbers">
+            <!-- Power numbers will be inserted here by JavaScript -->
+        </div>
+        
+        <div class="binary-grid" id="binary-cells">
+            <!-- Binary cells will be inserted here by JavaScript -->
+        </div>
+
+        <!-- Result Display -->
+        <div class="result-container">
+            <span class="equals-sign">=</span>
+            <div class="result-box" id="result">0</div>
+        </div>
+
+        <!-- Number Pad -->
+        <div class="numpad" id="numpad">
+            <!-- Number pad buttons will be inserted here by JavaScript -->
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="control-buttons">
+            <button class="control-button" id="switch-mode">SWITCH MODE</button>
+            <button class="control-button" id="sound-toggle">SOUND OFF</button>
+            <button class="control-button" id="end-game">END GAME</button>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        const gameState = {
+            score: 0,
+            level: 1,
+            linesLeft: 15,
+            mode: 'binary-to-decimal', // or 'decimal-to-binary'
+            currentValue: null,
+            selectedCells: Array(8).fill(0),
+            userAnswer: '',
+            powers: [128, 64, 32, 16, 8, 4, 2, 1],
+            soundEnabled: true
+        };
+
+        // DOM Elements
+        const elements = {
+            score: document.getElementById('score'),
+            level: document.getElementById('level'),
+            linesLeft: document.getElementById('lines-left'),
+            powerNumbers: document.getElementById('power-numbers'),
+            binaryCells: document.getElementById('binary-cells'),
+            result: document.getElementById('result'),
+            numpad: document.getElementById('numpad'),
+            switchMode: document.getElementById('switch-mode'),
+            soundToggle: document.getElementById('sound-toggle'),
+            endGame: document.getElementById('end-game')
+        };
+
+        // Initialize power numbers
+        function initializePowerNumbers() {
+            elements.powerNumbers.innerHTML = gameState.powers
+                .map(power => `<div class="power-number">${power}</div>`)
+                .join('');
+        }
+
+        // Initialize binary cells
+        function initializeBinaryCells() {
+            elements.binaryCells.innerHTML = gameState.selectedCells
+                .map((value, index) => `
+                    <div class="binary-cell" data-index="${index}">${value}</div>
+                `)
+                .join('');
+
+            // Add click handlers
+            document.querySelectorAll('.binary-cell').forEach(cell => {
+                cell.addEventListener('click', () => toggleCell(parseInt(cell.dataset.index)));
+            });
+        }
+
+        // Initialize numpad
+        function initializeNumpad() {
+            elements.numpad.innerHTML = `
+                ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => `
+                    <button class="numpad-button" data-number="${num}">${num}</button>
+                `).join('')}
+                <button class="numpad-button" data-action="delete">DEL</button>
+                <button class="numpad-button" data-number="0">0</button>
+                <button class="numpad-button" data-action="submit">✓</button>
+            `;
+
+            // Add click handlers
+            elements.numpad.addEventListener('click', (e) => {
+                const button = e.target.closest('.numpad-button');
+                if (!button) return;
+
+                if (button.dataset.number) {
+                    handleNumberInput(button.dataset.number);
+                } else if (button.dataset.action === 'delete') {
+                    handleDelete();
+                } else if (button.dataset.action === 'submit') {
+                    checkAnswer();
+                }
+            });
+        }
+
+        // Generate new question
+        function generateNewQuestion() {
+            if (gameState.mode === 'binary-to-decimal') {
+                // Generate random binary number
+                gameState.selectedCells = Array(8).fill(0)
+                    .map(() => Math.random() > 0.5 ? 1 : 0);
+                gameState.currentValue = calculateDecimalValue(gameState.selectedCells);
+                gameState.userAnswer = '';
+            } else {
+                // Generate random decimal number (0-255)
+                gameState.currentValue = Math.floor(Math.random() * 256);
+                gameState.selectedCells = Array(8).fill(0);
+                gameState.userAnswer = '';
+            }
+            updateDisplay();
+        }
+
+        // Calculate decimal value from binary array
+        function calculateDecimalValue(binaryArray) {
+            return binaryArray.reduce((sum, digit, index) =>
+                sum + digit * gameState.powers[index], 0);
+        }
+
+        // Update display
+        function updateDisplay() {
+            // Update stats
+            elements.score.textContent = gameState.score;
+            elements.level.textContent = gameState.level;
+            elements.linesLeft.textContent = gameState.linesLeft;
+
+            // Update binary cells
+            document.querySelectorAll('.binary-cell').forEach((cell, index) => {
+                cell.textContent = gameState.selectedCells[index];
+                cell.classList.toggle('active', gameState.selectedCells[index] === 1);
+            });
+
+            // Update result box
+            if (gameState.mode === 'binary-to-decimal') {
+                elements.result.textContent = gameState.userAnswer || '?';
+            } else {
+                elements.result.textContent = gameState.currentValue;
+            }
+
+            // Show/hide numpad based on mode
+            elements.numpad.style.display =
+                gameState.mode === 'binary-to-decimal' ? 'grid' : 'none';
+        }
+
+        // Toggle binary cell
+        function toggleCell(index) {
+            if (gameState.mode === 'decimal-to-binary') {
+                gameState.selectedCells[index] = 1 - gameState.selectedCells[index];
+                updateDisplay();
+                checkAnswer();
+            }
+        }
+
+        // Handle number input
+        function handleNumberInput(number) {
+            if (gameState.mode === 'binary-to-decimal' && gameState.userAnswer.length < 3) {
+                gameState.userAnswer += number;
+                updateDisplay();
+            }
+        }
+
+        // Handle delete
+        function handleDelete() {
+            if (gameState.mode === 'binary-to-decimal') {
+                gameState.userAnswer = gameState.userAnswer.slice(0, -1);
+                updateDisplay();
+            }
+        }
+
+        // Check answer
+        function checkAnswer() {
+            let isCorrect = false;
+
+            if (gameState.mode === 'binary-to-decimal') {
+                isCorrect = parseInt(gameState.userAnswer) === gameState.currentValue;
+            } else {
+                const userDecimal = calculateDecimalValue(gameState.selectedCells);
+                isCorrect = userDecimal === gameState.currentValue;
+            }
+
+            if (isCorrect) {
+                handleCorrectAnswer();
+            }
+        }
+
+        // Handle correct answer
+        function handleCorrectAnswer() {
+            gameState.score += 1;
+            gameState.linesLeft -= 1;
+
+            if (gameState.linesLeft <= 0) {
+                gameState.level += 1;
+                gameState.linesLeft = 15;
+            }
+
+            // Add visual feedback
+            elements.result.style.backgroundColor = '#4CAF50';
+            setTimeout(() => {
+                elements.result.style.backgroundColor = 'white';
+                generateNewQuestion();
+            }, 500);
+        }
+
+        // Switch game mode
+        function switchMode() {
+            gameState.mode = gameState.mode === 'binary-to-decimal'
+                ? 'decimal-to-binary'
+                : 'binary-to-decimal';
+            generateNewQuestion();
+        }
+
+        // Event Listeners
+        elements.switchMode.addEventListener('click', switchMode);
+        elements.soundToggle.addEventListener('click', () => {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            elements.soundToggle.textContent =
+                gameState.soundEnabled ? 'SOUND ON' : 'SOUND OFF';
+        });
+        elements.endGame.addEventListener('click', () => {
+            if (confirm('Are you sure you want to end the game?')) {
+                gameState.score = 0;
+                gameState.level = 1;
+                gameState.linesLeft = 15;
+                generateNewQuestion();
+            }
+        });
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (gameState.mode === 'binary-to-decimal') {
+                if (e.key >= '0' && e.key <= '9') {
+                    handleNumberInput(e.key);
+                } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                    handleDelete();
+                } else if (e.key === 'Enter') {
+                    checkAnswer();
+                }
+            }
+        });
+
+        // Initialize game
+        function initializeGame() {
+            initializePowerNumbers();
+            initializeBinaryCells();
+            initializeNumpad();
+            generateNewQuestion();
+        }
+
+        // Start the game
+        initializeGame();
+    </script>
+</body>
+</html>
